@@ -1,0 +1,914 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>お知らせ編集ツール | そら</title>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css?v=7">
+<link rel="icon" href="img/sora-logo.png">
+<style>
+  /* ===== 編集ツール専用スタイル ===== */
+  body{ background: #f4f1e8; }
+  .editor-wrap{ max-width: 1080px; margin: 0 auto; padding: 28px 18px 120px; }
+  .editor-head{
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; background: #fff; border-radius: var(--radius);
+    box-shadow: var(--shadow-soft); margin-bottom: 20px;
+    border: 1px solid var(--sora-line);
+  }
+  .editor-head img{ width: 48px; height: auto; }
+  .editor-head h1{
+    margin: 0; font-size: 20px; font-weight: 700;
+    font-family: 'Zen Maru Gothic', sans-serif;
+  }
+  .editor-head .sub{ font-size: 12px; color: var(--sora-ink-soft); margin-top: 2px; }
+  .editor-head .head-right{ margin-left: auto; display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* ガイド */
+  .guide{
+    background: #fff8b1; border: 1px solid #ead97c; border-radius: var(--radius);
+    padding: 14px 18px; margin-bottom: 20px; font-size: 14px; line-height: 1.9;
+  }
+  .guide h2{
+    margin: 0 0 6px; font-size: 15px; font-weight: 900;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .guide ol{ margin: 4px 0 0; padding-left: 22px; }
+  .guide ol li{ margin: 2px 0; }
+  .guide code{
+    background: #fff; padding: 1px 6px; border-radius: 4px;
+    border: 1px solid #e0d9b8; font-family: 'SF Mono', Menlo, monospace; font-size: 12px;
+  }
+
+  /* タブ */
+  .tabs{ display: flex; gap: 4px; margin-bottom: 14px; }
+  .tab-btn{
+    flex: 1; padding: 12px 10px; background: #fff; border: 1px solid var(--sora-line);
+    border-radius: var(--radius) var(--radius) 0 0; cursor: pointer;
+    font-family: inherit; font-size: 14px; font-weight: 700; color: var(--sora-ink-soft);
+    border-bottom: none; transition: background-color 0.15s;
+  }
+  .tab-btn:hover{ background: #fafaf3; }
+  .tab-btn.active{ background: #fff; color: var(--sora-blue-deep); position: relative; }
+  .tab-btn.active::after{
+    content: ''; position: absolute; left: 0; right: 0; bottom: -1px; height: 3px;
+    background: var(--sora-blue); border-radius: 3px 3px 0 0;
+  }
+  .tab-panel{ display: none; }
+  .tab-panel.active{ display: block; }
+
+  /* カード一覧（エディタ側） */
+  .list-head{
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 4px 10px; gap: 10px; flex-wrap: wrap;
+  }
+  .list-head .count{ font-size: 13px; color: var(--sora-ink-soft); }
+  .items-list{ display: grid; gap: 10px; }
+  .item-row{
+    display: grid; grid-template-columns: 80px 1fr auto; gap: 12px; align-items: center;
+    background: #fff; border: 1px solid var(--sora-line); border-radius: 14px;
+    padding: 12px 14px; box-shadow: 0 2px 6px rgba(0,0,0,.03);
+    transition: box-shadow .15s, transform .1s;
+  }
+  .item-row:hover{ box-shadow: 0 6px 16px rgba(0,0,0,.08); }
+  .item-row .date{ font-family: 'SF Mono', Menlo, monospace; font-size: 13px; color: var(--sora-ink-soft); }
+  .item-row .title{
+    font-weight: 700; font-size: 15px; display: -webkit-box;
+    /* -webkit-line-clamp: 1;  */
+    -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .item-row .excerpt{ font-size: 12px; color: var(--sora-ink-soft); display: -webkit-box;
+    /* -webkit-line-clamp: 1;  */
+    -webkit-box-orient: vertical; overflow: hidden; margin-top: 2px; }
+  .item-row .actions{ display: flex; gap: 4px; }
+  .item-row .tag-mini{
+    display: inline-block; padding: 1px 8px; border-radius: 999px;
+    font-size: 10px; margin-right: 6px; vertical-align: middle;
+  }
+  .tag-mini.news{ background: var(--sora-blue-soft); color: var(--sora-blue-deep); }
+  .tag-mini.blog{ background: #ffe4c4; color: #b36a00; }
+  .tag-mini.event{ background: #ffd9e2; color: #b33768; }
+
+  .icon-btn{
+    background: #fafaf3; border: 1px solid var(--sora-line); border-radius: 10px;
+    width: 38px; height: 38px; cursor: pointer; display: inline-flex;
+    align-items: center; justify-content: center; color: var(--sora-ink);
+    transition: background .15s;
+  }
+  .icon-btn:hover{ background: var(--sora-blue-soft); color: var(--sora-blue-deep); }
+  .icon-btn.danger:hover{ background: #ffdede; color: #c53030; }
+  .icon-btn .material-symbols-outlined{ font-size: 20px; }
+
+  /* ボタン */
+  .btn{
+    display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px;
+    border-radius: 999px; border: 1px solid var(--sora-line); background: #fff;
+    cursor: pointer; font-family: inherit; font-size: 14px; font-weight: 700;
+    color: var(--sora-ink); transition: all .15s;
+  }
+  .btn:hover{ background: #fafaf3; }
+  .btn.primary{
+    background: var(--sora-blue-deep); color: #fff; border-color: var(--sora-blue-deep);
+  }
+  .btn.primary:hover{ background: #1f7aa2; }
+  .btn.ghost{ background: transparent; }
+  .btn .material-symbols-outlined{ font-size: 18px; }
+  .btn-big{ padding: 12px 22px; font-size: 15px; }
+
+  /* 編集モーダル */
+  .modal-veil{
+    position: fixed; inset: 0; background: rgba(20,30,45,.45);
+    display: none; align-items: flex-start; justify-content: center;
+    z-index: 200; padding: 30px 12px; overflow-y: auto;
+    backdrop-filter: blur(3px);
+  }
+  .modal-veil.open{ display: flex; }
+  .modal{
+    background: #fff; border-radius: var(--radius); width: 100%; max-width: 720px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.25); overflow: hidden; margin: auto 0;
+  }
+  .modal-head{
+    padding: 16px 22px; border-bottom: 1px solid var(--sora-line);
+    display: flex; align-items: center; gap: 10px;
+    background: linear-gradient(180deg, #eaf6ff 0%, #fff 100%);
+  }
+  .modal-head h2{ margin: 0; font-size: 17px; font-weight: 900; }
+  .modal-head .close{ margin-left: auto; }
+  .modal-body{ padding: 20px 22px; max-height: 70vh; overflow-y: auto; }
+  .modal-foot{
+    padding: 14px 22px; border-top: 1px solid var(--sora-line);
+    display: flex; gap: 10px; justify-content: flex-end; background: #fafaf3;
+  }
+
+  /* フォーム */
+  .field{ margin-bottom: 16px; }
+  .field label{
+    display: block; font-size: 13px; font-weight: 700; margin-bottom: 6px;
+    color: var(--sora-ink);
+  }
+  .field label .req{ color: #c53030; margin-left: 2px; }
+  .field .hint{ font-size: 11px; color: var(--sora-ink-soft); margin-top: 4px; }
+  .field input[type=text],
+  .field input[type=date],
+  .field input[type=url],
+  .field textarea,
+  .field select{
+    width: 100%; padding: 10px 12px; font-family: inherit; font-size: 14px;
+    border: 1.5px solid var(--sora-line); border-radius: 10px; background: #fff;
+    color: var(--sora-ink); transition: border-color .15s;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus{
+    outline: none; border-color: var(--sora-blue);
+    box-shadow: 0 0 0 3px rgba(87,198,241,.2);
+  }
+  .field textarea{ min-height: 90px; resize: vertical; line-height: 1.7; }
+
+  /* タグ選択（セグメント） */
+  .seg{ display: inline-flex; background: #f4f1e8; border-radius: 10px; padding: 3px; gap: 2px; }
+  .seg label{
+    display: inline-flex; align-items: center; gap: 4px; padding: 7px 14px;
+    border-radius: 8px; cursor: pointer; font-size: 13px; font-weight: 700;
+    color: var(--sora-ink-soft); margin: 0; user-select: none;
+  }
+  .seg label input{ display: none; }
+  .seg label.news:has(input:checked){ background: var(--sora-blue-soft); color: var(--sora-blue-deep); }
+  .seg label.blog:has(input:checked){ background: #ffe4c4; color: #b36a00; }
+  .seg label.event:has(input:checked){ background: #ffd9e2; color: #b33768; }
+
+  /* 画像添付 */
+  .img-drop{
+    border: 2px dashed var(--sora-line); border-radius: 12px; padding: 18px;
+    text-align: center; background: #fafaf3; cursor: pointer; transition: all .15s;
+  }
+  .img-drop:hover{ border-color: var(--sora-blue); background: #eaf6ff; }
+  .img-drop.has-img{ padding: 10px; text-align: left; }
+  .img-drop .material-symbols-outlined{ font-size: 32px; color: var(--sora-ink-soft); }
+  .img-drop .tip{ font-size: 12px; color: var(--sora-ink-soft); margin-top: 4px; }
+  .img-preview{
+    display: flex; gap: 12px; align-items: center;
+  }
+  .img-preview img{
+    width: 90px; height: 90px; object-fit: cover; border-radius: 10px;
+    border: 1px solid var(--sora-line);
+  }
+  .img-preview .img-info{ flex: 1; font-size: 12px; color: var(--sora-ink-soft); line-height: 1.6; }
+  .img-preview .img-info .fn{ font-weight: 700; color: var(--sora-ink); font-size: 13px; word-break: break-all; }
+  .img-warn{
+    background: #fff8b1; border: 1px solid #ead97c; color: #7a5a00;
+    font-size: 12px; padding: 8px 12px; border-radius: 8px; margin-top: 8px; line-height: 1.6;
+  }
+
+  /* プレビュー */
+  .preview-wrap{
+    background: var(--sora-cream); border: 1px solid var(--sora-line);
+    border-radius: var(--radius); padding: 22px; min-height: 400px;
+  }
+  .preview-label{
+    display: inline-block; font-size: 11px; color: var(--sora-ink-soft);
+    background: #fff; padding: 3px 10px; border-radius: 999px;
+    border: 1px solid var(--sora-line); margin-bottom: 14px;
+  }
+
+  /* ダウンロードタブ */
+  .dl-panel{
+    background: #fff; border: 1px solid var(--sora-line); border-radius: var(--radius);
+    padding: 22px; box-shadow: var(--shadow-soft);
+  }
+  .dl-panel h2{ margin: 0 0 6px; font-size: 18px; }
+  .dl-panel p{ margin: 4px 0 14px; color: var(--sora-ink-soft); font-size: 13px; line-height: 1.8; }
+  .dl-panel pre{
+    background: #1e2a38; color: #e8f1ff; padding: 14px 16px; border-radius: 10px;
+    font-size: 12px; line-height: 1.7; overflow-x: auto; max-height: 260px;
+    font-family: 'SF Mono', Menlo, monospace;
+  }
+  .dl-steps{
+    counter-reset: s; margin: 14px 0 0; padding: 0; list-style: none;
+  }
+  .dl-steps li{
+    counter-increment: s; padding: 10px 12px 10px 44px; position: relative;
+    background: #fafaf3; border-radius: 10px; margin-bottom: 8px; font-size: 13px;
+  }
+  .dl-steps li::before{
+    content: counter(s); position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
+    width: 24px; height: 24px; background: var(--sora-blue); color: #fff; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px;
+  }
+
+  /* 空状態 */
+  .empty{
+    padding: 40px 20px; text-align: center; color: var(--sora-ink-soft);
+    background: #fff; border: 1px dashed var(--sora-line); border-radius: var(--radius);
+  }
+  .empty .material-symbols-outlined{ font-size: 48px; color: var(--sora-line); }
+
+  /* トースト */
+  .toast{
+    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%) translateY(20px);
+    background: #2a8fbd; color: #fff; padding: 12px 20px; border-radius: 999px;
+    font-size: 14px; font-weight: 700; box-shadow: 0 10px 30px rgba(0,0,0,.2);
+    opacity: 0; pointer-events: none; transition: all .3s; z-index: 300;
+    display: flex; align-items: center; gap: 6px;
+  }
+  .toast.show{ opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ログイン画面 */
+  .lock-veil{
+    position: fixed; inset: 0; background: linear-gradient(180deg, #eaf6ff 0%, #fff8ee 100%);
+    display: flex; align-items: center; justify-content: center; z-index: 500; padding: 20px;
+  }
+  .lock-card{
+    background: #fff; border-radius: var(--radius); padding: 36px 30px;
+    box-shadow: 0 20px 60px rgba(60,100,140,.18); max-width: 380px; width: 100%;
+    text-align: center;
+  }
+  .lock-card img{ width: 80px; height: auto; margin: 0 auto 12px; }
+  .lock-card h1{ margin: 0 0 6px; font-size: 20px; }
+  .lock-card p{ margin: 0 0 18px; color: var(--sora-ink-soft); font-size: 13px; }
+  .lock-card input{
+    width: 100%; padding: 12px 14px; font-family: inherit; font-size: 16px;
+    border: 1.5px solid var(--sora-line); border-radius: 10px; text-align: center;
+    letter-spacing: .2em;
+  }
+  .lock-card input:focus{ outline: none; border-color: var(--sora-blue); }
+  .lock-card .err{
+    color: #c53030; font-size: 12px; margin-top: 8px; height: 14px;
+  }
+  .lock-card .btn{ margin-top: 14px; width: 100%; justify-content: center; }
+
+  /* ドラフト表示 */
+  .draft-badge{
+    display: inline-flex; align-items: center; gap: 4px; font-size: 11px;
+    background: #fff8b1; color: #7a5a00; padding: 3px 8px; border-radius: 999px;
+    border: 1px solid #ead97c; margin-left: 6px;
+  }
+  .draft-badge .material-symbols-outlined{ font-size: 13px; }
+
+  @media (max-width: 640px){
+    .item-row{ grid-template-columns: 70px 1fr; }
+    .item-row .actions{ grid-column: 1 / -1; justify-content: flex-end; }
+    .editor-head{ flex-wrap: wrap; }
+    .editor-head .head-right{ width: 100%; }
+    .editor-head .head-right .btn{ flex: 1; justify-content: center; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ========== ログイン画面（簡易パスワード） ========== -->
+<div class="lock-veil" id="lockVeil">
+  <div class="lock-card">
+    <img src="img/sora-logo.png" alt="そら">
+    <h1>お知らせ編集ツール</h1>
+    <p>スタッフ用の合言葉を入力してください</p>
+    <input type="password" id="lockInput" placeholder="••••" autocomplete="off">
+    <div class="err" id="lockErr">&nbsp;</div>
+    <button class="btn primary" id="lockBtn">
+      <span class="material-symbols-outlined">lock_open</span>はじめる
+    </button>
+  </div>
+</div>
+
+<!-- ========== メイン ========== -->
+<div class="editor-wrap" id="main" style="display:none;">
+
+  <!-- ヘッダー -->
+  <div class="editor-head">
+    <img src="img/sora-logo.png" alt="そら">
+    <div>
+      <h1>お知らせ編集ツール
+        <span class="draft-badge" id="draftBadge" style="display:none;">
+          <span class="material-symbols-outlined">save</span>下書きあり
+        </span>
+      </h1>
+      <div class="sub">ブラウザで編集 → ダウンロード → ファイルを差し替え</div>
+    </div>
+    <div class="head-right">
+      <button class="btn ghost" id="reloadBtn" title="サーバーの news-data.json を再読み込み">
+        <span class="material-symbols-outlined">refresh</span>読み直す
+      </button>
+      <button class="btn primary" id="downloadBtn">
+        <span class="material-symbols-outlined">download</span>JSONをダウンロード
+      </button>
+    </div>
+  </div>
+
+  <!-- 使い方ガイド -->
+  <div class="guide">
+    <h2>💡 使い方（はじめての方へ）</h2>
+    <ol>
+      <li>「＋ 新しいお知らせ」で記事を追加／鉛筆アイコンで編集</li>
+      <li>「プレビュー」タブで実際の見た目を確認</li>
+      <li>右上の <b>JSONをダウンロード</b> を押すと <code>news-data.json</code> が保存される</li>
+      <li>ダウンロードしたファイルを、サイトのフォルダにある <code>news-data.json</code> に<b>上書き</b>して完了！</li>
+    </ol>
+  </div>
+
+  <!-- タブ -->
+  <div class="tabs">
+    <button class="tab-btn active" data-tab="list">
+      <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">list_alt</span>
+      一覧・編集
+    </button>
+    <button class="tab-btn" data-tab="preview">
+      <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">visibility</span>
+      プレビュー
+    </button>
+    <button class="tab-btn" data-tab="download">
+      <span class="material-symbols-outlined" style="vertical-align:middle;font-size:18px;">cloud_download</span>
+      ダウンロード
+    </button>
+  </div>
+
+  <!-- 一覧・編集 -->
+  <div class="tab-panel active" id="tab-list">
+    <div class="list-head">
+      <div class="count" id="countLabel">—</div>
+      <button class="btn primary btn-big" id="addBtn">
+        <span class="material-symbols-outlined">add</span>新しいお知らせ
+      </button>
+    </div>
+    <div class="items-list" id="itemsList"></div>
+  </div>
+
+  <!-- プレビュー -->
+  <div class="tab-panel" id="tab-preview">
+    <div class="preview-wrap">
+      <span class="preview-label">実際のサイトでの見え方（news.html と同じ）</span>
+      <div class="news-grid" id="previewGrid"></div>
+    </div>
+  </div>
+
+  <!-- ダウンロード -->
+  <div class="tab-panel" id="tab-download">
+    <div class="dl-panel">
+      <h2>📥 保存（JSONのダウンロード）</h2>
+      <p>
+        ここで編集した内容をサイトに反映するには、JSONファイルをダウンロードして、
+        サーバー（または納品フォルダ）の <code>news-data.json</code> を <b>上書き</b> してください。
+      </p>
+      <button class="btn primary btn-big" id="downloadBtn2">
+        <span class="material-symbols-outlined">download</span>news-data.json をダウンロード
+      </button>
+
+      <ol class="dl-steps">
+        <li>上のボタンで <code>news-data.json</code> をダウンロード</li>
+        <li>サイトのファイル一式の中にある <code>news-data.json</code> を、ダウンロードしたファイルで<b>上書き</b></li>
+        <li>サーバーにアップロードすれば、<code>news.html</code> に反映されます ✨</li>
+      </ol>
+
+      <h2 style="margin-top: 24px;">🖼️ 画像を使っている場合</h2>
+      <p>
+        画像を添付したお知らせがあるときは、画像ファイルも一緒にアップロードが必要です。
+        下のボタンで画像ファイル一式（ZIP）をダウンロードできます。
+      </p>
+      <button class="btn" id="downloadImgsBtn">
+        <span class="material-symbols-outlined">image</span>添付画像をまとめてダウンロード
+      </button>
+      <div class="img-warn" style="margin-top:10px;">
+        ※ 画像ファイルは <code>img/news/</code> フォルダに配置する想定です。
+        JSON内の <code>image</code> フィールドは <code>img/news/ファイル名</code> の形で出力されます。
+      </div>
+
+      <h2 style="margin-top: 24px;">👀 JSONのプレビュー</h2>
+      <pre id="jsonPreview"></pre>
+    </div>
+  </div>
+
+</div>
+
+<!-- ========== 編集モーダル ========== -->
+<div class="modal-veil" id="modalVeil">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="material-symbols-outlined" style="color:var(--sora-blue-deep);">edit_note</span>
+      <h2 id="modalTitle">お知らせを編集</h2>
+      <button class="icon-btn close" id="modalClose" aria-label="閉じる">
+        <span class="material-symbols-outlined">close</span>
+      </button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>日付<span class="req">*</span></label>
+        <input type="date" id="f-date">
+      </div>
+
+      <div class="field">
+        <label>種類<span class="req">*</span></label>
+        <div class="seg" id="f-tag">
+          <label class="news"><input type="radio" name="ftag" value="news">お知らせ</label>
+          <label class="blog"><input type="radio" name="ftag" value="blog">ブログ</label>
+          <label class="event"><input type="radio" name="ftag" value="event">行事</label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>タイトル<span class="req">*</span></label>
+        <input type="text" id="f-title" placeholder="例：春のおさんぽ会をひらきました" maxlength="60">
+        <div class="hint">短く・わかりやすく（目安：25文字以内）</div>
+      </div>
+
+      <div class="field">
+        <label>本文（かんたんな説明）</label>
+        <textarea id="f-excerpt" placeholder="本文の冒頭・抜粋を書いてください" maxlength="200"></textarea>
+        <div class="hint">カード上に表示される短い説明です（目安：80文字以内）</div>
+      </div>
+
+      <div class="field">
+        <label>リンクURL（任意）</label>
+        <input type="url" id="f-url" placeholder="https://... （詳細ページがあれば）">
+        <div class="hint">空欄でもOK</div>
+      </div>
+
+      <div class="field">
+        <label>画像（任意）</label>
+        <div class="img-drop" id="imgDrop">
+          <div id="imgDropEmpty">
+            <span class="material-symbols-outlined">add_photo_alternate</span>
+            <div>クリックまたはドラッグで画像を選ぶ</div>
+            <div class="tip">JPEG / PNG / WebP  ・ 目安 2MB以内</div>
+          </div>
+          <div class="img-preview" id="imgPreview" style="display:none;">
+            <img id="imgPreviewImg" alt="">
+            <div class="img-info">
+              <div class="fn" id="imgPreviewName"></div>
+              <div id="imgPreviewSize"></div>
+              <button class="btn" id="imgRemove" style="margin-top:6px;padding:4px 10px;font-size:12px;">
+                <span class="material-symbols-outlined" style="font-size:14px;">delete</span>削除
+              </button>
+            </div>
+          </div>
+          <input type="file" id="imgFile" accept="image/*" style="display:none;">
+        </div>
+        <div class="img-warn" id="imgWarn" style="display:none;">
+          <b>ご注意：</b> 画像は編集中だけブラウザに一時保存されます。
+          サイトに反映するには、<b>ダウンロードタブ</b>から画像ファイルも一緒にダウンロードしてアップロードしてください。
+        </div>
+      </div>
+    </div>
+    <div class="modal-foot">
+      <button class="btn" id="modalCancel">キャンセル</button>
+      <button class="btn primary" id="modalSave">
+        <span class="material-symbols-outlined">check</span>保存
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- トースト -->
+<div class="toast" id="toast"><span class="material-symbols-outlined">check_circle</span><span id="toastMsg">保存しました</span></div>
+
+<!-- JSZip（画像ZIPダウンロード用） -->
+<script src="https://unpkg.com/jszip@3.10.1/dist/jszip.min.js"></script>
+
+<script>
+// ========================================================
+// 合言葉（このファイルは誰でも開けるので、本格的な認証ではありません）
+// 変えたい場合は下の文字列を書き換えてください
+// ========================================================
+const PASSPHRASE = 'sora';
+const STORAGE_KEY = 'sora-news-editor-draft-v1';
+
+// ---------- 認証 ----------
+const lockVeil = document.getElementById('lockVeil');
+const lockInput = document.getElementById('lockInput');
+const lockBtn = document.getElementById('lockBtn');
+const lockErr = document.getElementById('lockErr');
+const main = document.getElementById('main');
+
+function tryUnlock(){
+  if (lockInput.value.trim().toLowerCase() === PASSPHRASE){
+    sessionStorage.setItem('sora-unlocked', '1');
+    lockVeil.style.display = 'none';
+    main.style.display = 'block';
+    init();
+  } else {
+    lockErr.textContent = '合言葉がちがいます';
+    lockInput.value = '';
+    lockInput.focus();
+  }
+}
+lockBtn.addEventListener('click', tryUnlock);
+lockInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+if (sessionStorage.getItem('sora-unlocked') === '1'){
+  lockVeil.style.display = 'none';
+  main.style.display = 'block';
+  init();
+} else {
+  setTimeout(()=>lockInput.focus(), 100);
+}
+
+// ========================================================
+// エディタ本体
+// ========================================================
+let items = [];
+let editingIndex = -1;     // -1 = 新規
+let currentImage = null;   // { name, dataUrl, size }
+const tagLabel = { news: 'お知らせ', blog: 'ブログ', event: '行事' };
+
+async function init(){
+  // 下書きがあれば読み込み、なければ news-data.json
+  const draft = loadDraft();
+  if (draft && draft.items){
+    items = draft.items;
+    document.getElementById('draftBadge').style.display = 'inline-flex';
+    showToast('下書きを復元しました', 'save');
+  } else {
+    await loadFromServer();
+  }
+  render();
+  bindUI();
+}
+
+async function loadFromServer(){
+  try {
+    const res = await fetch('news-data.json?_=' + Date.now());
+    items = await res.json();
+  } catch(e){
+    items = [];
+    console.warn('news-data.json を読み込めませんでした', e);
+  }
+}
+
+// ---------- 下書き保存／復元 ----------
+function saveDraft(){
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({ items, ts: Date.now() }));
+    document.getElementById('draftBadge').style.display = 'inline-flex';
+  } catch(e){
+    // localStorage が溢れた場合（画像が大きすぎる等）
+    console.warn('下書き保存に失敗', e);
+  }
+}
+function loadDraft(){
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e){ return null; }
+}
+function clearDraft(){
+  localStorage.removeItem(STORAGE_KEY);
+  document.getElementById('draftBadge').style.display = 'none';
+}
+
+// ---------- 描画 ----------
+function render(){
+  // 日付降順
+  items.sort((a,b) => (a.date < b.date ? 1 : -1));
+  renderList();
+  renderPreview();
+  renderJsonPreview();
+}
+
+function renderList(){
+  const el = document.getElementById('itemsList');
+  document.getElementById('countLabel').textContent = `${items.length}件のお知らせ`;
+  if (!items.length){
+    el.innerHTML = `
+      <div class="empty">
+        <span class="material-symbols-outlined">inbox</span>
+        <div style="margin-top:6px;">お知らせがまだありません</div>
+        <div style="font-size:12px;">右上の「新しいお知らせ」から追加してください</div>
+      </div>`;
+    return;
+  }
+  el.innerHTML = items.map((it, i) => `
+    <div class="item-row">
+      <div class="date">${(it.date||'').replace(/-/g,'.')}</div>
+      <div>
+        <div class="title">
+          <span class="tag-mini ${it.tag||'news'}">${tagLabel[it.tag]||'お知らせ'}</span>
+          ${escapeHtml(it.title||'（無題）')}
+          ${it._imageData ? '<span class="material-symbols-outlined" style="font-size:15px;color:#2a8fbd;vertical-align:middle;" title="画像あり">image</span>' : ''}
+        </div>
+        <div class="excerpt">${escapeHtml(it.excerpt||'')}</div>
+      </div>
+      <div class="actions">
+        <button class="icon-btn" data-act="up" data-i="${i}" title="上へ" ${i===0?'disabled style="opacity:.3"':''}>
+          <span class="material-symbols-outlined">arrow_upward</span>
+        </button>
+        <button class="icon-btn" data-act="edit" data-i="${i}" title="編集">
+          <span class="material-symbols-outlined">edit</span>
+        </button>
+        <button class="icon-btn danger" data-act="del" data-i="${i}" title="削除">
+          <span class="material-symbols-outlined">delete</span>
+        </button>
+      </div>
+    </div>
+  `).join('');
+}
+
+function renderPreview(){
+  const el = document.getElementById('previewGrid');
+  if (!items.length){
+    el.innerHTML = '<div class="empty"><span class="material-symbols-outlined">visibility_off</span><div style="margin-top:6px;">お知らせが0件です</div></div>';
+    return;
+  }
+  el.innerHTML = items.map(it => {
+    const imgSrc = it._imageData || (it.image ? it.image : null);
+    return `
+    <article class="news-card">
+      ${imgSrc ? `<img src="${imgSrc}" alt="" style="width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:10px;margin-bottom:10px;">` : ''}
+      <div class="news-meta">
+        <time datetime="${it.date||''}">${(it.date||'').replace(/-/g,'.')}</time>
+        <span class="news-tag news-tag-${it.tag||'news'}">${tagLabel[it.tag]||'お知らせ'}</span>
+      </div>
+      <h3 class="news-title">${it.url ? `<a href="${escapeAttr(it.url)}">${escapeHtml(it.title||'')}</a>` : escapeHtml(it.title||'')}</h3>
+      ${it.excerpt ? `<p class="news-excerpt">${escapeHtml(it.excerpt)}</p>` : ''}
+    </article>`;
+  }).join('');
+}
+
+function renderJsonPreview(){
+  document.getElementById('jsonPreview').textContent = JSON.stringify(buildOutputItems(), null, 2);
+}
+
+// 出力用（_imageData は除外、image ファイル名のみ残す）
+function buildOutputItems(){
+  return items.map(it => {
+    const out = {
+      date: it.date || '',
+      tag: it.tag || 'news',
+      title: it.title || '',
+      excerpt: it.excerpt || '',
+      url: it.url || ''
+    };
+    if (it.image) out.image = it.image;
+    return out;
+  });
+}
+
+// ---------- UIバインド ----------
+function bindUI(){
+  // タブ
+  document.querySelectorAll('.tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+      document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+      btn.classList.add('active');
+      document.getElementById('tab-' + btn.dataset.tab).classList.add('active');
+      if (btn.dataset.tab === 'preview') renderPreview();
+      if (btn.dataset.tab === 'download') renderJsonPreview();
+    });
+  });
+
+  // リスト内のクリック
+  document.getElementById('itemsList').addEventListener('click', e => {
+    const btn = e.target.closest('button[data-act]');
+    if (!btn) return;
+    const i = +btn.dataset.i;
+    const act = btn.dataset.act;
+    if (act === 'edit') openEdit(i);
+    else if (act === 'del') {
+      if (confirm('このお知らせを削除しますか？')){
+        items.splice(i, 1);
+        saveDraft(); render();
+        showToast('削除しました', 'delete');
+      }
+    } else if (act === 'up' && i > 0) {
+      // 実質同日内の並び替え用（日付降順ソートがあるので注意喚起）
+      [items[i-1], items[i]] = [items[i], items[i-1]];
+      saveDraft(); render();
+    }
+  });
+
+  // 追加
+  document.getElementById('addBtn').addEventListener('click', () => openEdit(-1));
+
+  // モーダル
+  document.getElementById('modalClose').addEventListener('click', closeModal);
+  document.getElementById('modalCancel').addEventListener('click', closeModal);
+  document.getElementById('modalVeil').addEventListener('click', e => {
+    if (e.target.id === 'modalVeil') closeModal();
+  });
+  document.getElementById('modalSave').addEventListener('click', saveModal);
+
+  // 画像
+  const drop = document.getElementById('imgDrop');
+  const fileInput = document.getElementById('imgFile');
+  drop.addEventListener('click', (e) => {
+    if (e.target.closest('#imgRemove')) return;
+    fileInput.click();
+  });
+  fileInput.addEventListener('change', e => handleFile(e.target.files[0]));
+  drop.addEventListener('dragover', e => { e.preventDefault(); drop.style.borderColor = 'var(--sora-blue)'; });
+  drop.addEventListener('dragleave', () => { drop.style.borderColor = ''; });
+  drop.addEventListener('drop', e => {
+    e.preventDefault(); drop.style.borderColor = '';
+    if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
+  });
+  document.getElementById('imgRemove').addEventListener('click', e => {
+    e.stopPropagation();
+    currentImage = null;
+    refreshImgPreview();
+  });
+
+  // ダウンロード
+  document.getElementById('downloadBtn').addEventListener('click', downloadJson);
+  document.getElementById('downloadBtn2').addEventListener('click', downloadJson);
+  document.getElementById('downloadImgsBtn').addEventListener('click', downloadImages);
+
+  // 読み直し
+  document.getElementById('reloadBtn').addEventListener('click', async () => {
+    if (!confirm('サーバーの news-data.json を読み直します。今の編集内容（下書き）は消えます。よろしいですか？')) return;
+    clearDraft();
+    await loadFromServer();
+    render();
+    showToast('読み直しました', 'refresh');
+  });
+}
+
+// ---------- 編集モーダル ----------
+function openEdit(i){
+  editingIndex = i;
+  const it = i >= 0 ? items[i] : { date: todayStr(), tag: 'news', title: '', excerpt: '', url: '' };
+  document.getElementById('modalTitle').textContent = i >= 0 ? 'お知らせを編集' : 'お知らせを追加';
+  document.getElementById('f-date').value = it.date || todayStr();
+  document.querySelectorAll('input[name=ftag]').forEach(r => r.checked = (r.value === (it.tag||'news')));
+  document.getElementById('f-title').value = it.title || '';
+  document.getElementById('f-excerpt').value = it.excerpt || '';
+  document.getElementById('f-url').value = it.url || '';
+  currentImage = (it._imageData) ? { name: it.image || 'image', dataUrl: it._imageData, size: 0 } : null;
+  refreshImgPreview();
+  document.getElementById('modalVeil').classList.add('open');
+  setTimeout(()=>document.getElementById('f-title').focus(), 100);
+}
+function closeModal(){
+  document.getElementById('modalVeil').classList.remove('open');
+}
+function saveModal(){
+  const date = document.getElementById('f-date').value;
+  const tag = document.querySelector('input[name=ftag]:checked')?.value || 'news';
+  const title = document.getElementById('f-title').value.trim();
+  const excerpt = document.getElementById('f-excerpt').value.trim();
+  const url = document.getElementById('f-url').value.trim();
+
+  if (!date){ alert('日付を入力してください'); return; }
+  if (!title){ alert('タイトルを入力してください'); return; }
+
+  const record = { date, tag, title, excerpt, url };
+  if (currentImage){
+    record.image = 'img/news/' + currentImage.name;
+    record._imageData = currentImage.dataUrl;
+  }
+  if (editingIndex >= 0){
+    items[editingIndex] = record;
+    showToast('保存しました', 'check');
+  } else {
+    items.unshift(record);
+    showToast('追加しました', 'add');
+  }
+  saveDraft();
+  render();
+  closeModal();
+}
+
+function refreshImgPreview(){
+  const empty = document.getElementById('imgDropEmpty');
+  const prev = document.getElementById('imgPreview');
+  const warn = document.getElementById('imgWarn');
+  const drop = document.getElementById('imgDrop');
+  if (currentImage){
+    empty.style.display = 'none';
+    prev.style.display = 'flex';
+    warn.style.display = 'block';
+    drop.classList.add('has-img');
+    document.getElementById('imgPreviewImg').src = currentImage.dataUrl;
+    document.getElementById('imgPreviewName').textContent = currentImage.name;
+    document.getElementById('imgPreviewSize').textContent =
+      currentImage.size ? prettyBytes(currentImage.size) : '';
+  } else {
+    empty.style.display = 'block';
+    prev.style.display = 'none';
+    warn.style.display = 'none';
+    drop.classList.remove('has-img');
+  }
+}
+
+function handleFile(file){
+  if (!file) return;
+  if (!file.type.startsWith('image/')){
+    alert('画像ファイルを選んでください');
+    return;
+  }
+  if (file.size > 5 * 1024 * 1024){
+    if (!confirm('画像サイズが大きいです（' + prettyBytes(file.size) + '）。続けますか？\n※ 大きすぎる画像は下書き保存に失敗することがあります')) return;
+  }
+  // ファイル名を半角英数化（安全のため）
+  const ext = (file.name.match(/\.[a-z0-9]+$/i) || ['.jpg'])[0].toLowerCase();
+  const baseName = 'news-' + Date.now() + ext;
+  const reader = new FileReader();
+  reader.onload = e => {
+    currentImage = { name: baseName, dataUrl: e.target.result, size: file.size };
+    refreshImgPreview();
+  };
+  reader.readAsDataURL(file);
+}
+
+// ---------- ダウンロード ----------
+function downloadJson(){
+  const out = buildOutputItems();
+  const json = JSON.stringify(out, null, 2);
+  const blob = new Blob([json], { type: 'application/json' });
+  triggerDownload(blob, 'news-data.json');
+  showToast('news-data.json を保存しました', 'download');
+}
+
+async function downloadImages(){
+  const withImgs = items.filter(it => it._imageData);
+  if (!withImgs.length){
+    alert('画像が添付されたお知らせはありません');
+    return;
+  }
+  if (typeof JSZip === 'undefined'){
+    alert('画像ZIPの生成に必要なライブラリが読み込めていません（ネットワーク接続をご確認ください）');
+    return;
+  }
+  const zip = new JSZip();
+  const folder = zip.folder('news');
+  for (const it of withImgs){
+    const m = it._imageData.match(/^data:(.+?);base64,(.+)$/);
+    if (!m) continue;
+    const name = (it.image || '').split('/').pop() || ('news-' + Date.now() + '.jpg');
+    folder.file(name, m[2], { base64: true });
+  }
+  const blob = await zip.generateAsync({ type: 'blob' });
+  triggerDownload(blob, 'news-images.zip');
+  showToast('画像ZIPを保存しました', 'download');
+}
+
+function triggerDownload(blob, filename){
+  const a = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 100);
+}
+
+// ---------- ユーティリティ ----------
+function todayStr(){
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+}
+function escapeHtml(s){
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+function escapeAttr(s){ return escapeHtml(s); }
+function prettyBytes(n){
+  if (n < 1024) return n + ' B';
+  if (n < 1024*1024) return (n/1024).toFixed(1) + ' KB';
+  return (n/1024/1024).toFixed(1) + ' MB';
+}
+function showToast(msg, icon){
+  const t = document.getElementById('toast');
+  document.getElementById('toastMsg').textContent = msg;
+  t.querySelector('.material-symbols-outlined').textContent = icon || 'check_circle';
+  t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(() => t.classList.remove('show'), 2200);
+}
+</script>
+
+</body>
+</html>
